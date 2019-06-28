@@ -1,0 +1,56 @@
+package com.oaec.webShop.filter;
+
+import com.alibaba.fastjson.JSON;
+
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebFilter;
+import javax.servlet.http.HttpFilter;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
+
+@WebFilter({"/cart","/add2Cart","/updateGoodsNum","/DeleteAllCart","/order","/addAddress","/checkOut","/datebase"})
+public class LoginViewFilter extends HttpFilter {
+    private boolean isAjax(HttpServletRequest request){
+        String header = request.getHeader("X-Requested-With");
+        if (header != null && header.equals("XMLHttpRequest")){
+            return true;
+        }else {
+            return false;
+        }
+    }
+    @Override
+    public void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws IOException, ServletException {
+        HttpSession session = request.getSession();
+        Object username = session.getAttribute("user");
+        if(username == null){
+            String requestURI = request.getRequestURI();
+            if(requestURI.contains("/add2Cart")){
+                requestURI = request.getContextPath()+"/product?gid="+request.getParameter("gid");
+            }
+            String queryString = request.getQueryString();
+            if (isAjax(request)){
+                response.setContentType("application/json;charset=utf-8");
+                PrintWriter writer = response.getWriter();
+                Map<String,Object> map = new HashMap<>();
+                map.put("uri",requestURI);
+                map.put("isLogin", false);
+                writer.println(JSON.toJSONString(map));
+                writer.close();
+            }else {
+                if (queryString != null){
+                    requestURI += "?"+queryString;
+                }
+//                response.sendRedirect(request.getContextPath()+"/WEB-INF/views/login.jsp?uri="+requestURI);
+                response.sendRedirect(request.getContextPath()+"/login?uri="+requestURI);
+            }
+        }else{
+            filterChain.doFilter(request,response);
+        }
+    }
+}
